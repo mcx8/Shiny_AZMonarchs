@@ -1,2 +1,1 @@
-# Shiny_AZMonarchs
-Shiny app for AZ Monarchs from 2000-2022
+# Shiny app for Arizona Monarchs from 2000-2022
