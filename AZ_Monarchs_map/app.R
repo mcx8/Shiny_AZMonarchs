@@ -123,7 +123,8 @@ ui <- dashboardPage(
                                        h3("Select data:"),
                                        choices = list("GBIF (exclude NA individualCount)" = 1,
                                                       "GBIF (NA individualCount)" = 2,
-                                                      "iNaturalist" = 3)),
+                                                      "iNaturalist" = 3),
+                                       selected = 1),
                     sliderInput(inputId = "date",
                                 h3("Select month and year:"),
                                 min = as.Date("2000-01-01"),
@@ -155,34 +156,53 @@ ui <- dashboardPage(
 server <- function(input, output) {
   
   # Make data reactive
-  reactive_data <- reactive({
-    req(input$checkbox)
-    monarch_data[monarch_data$dataname %in% input$checkbox, ]
-    })
+  # reactive_data <- reactive({
+  #   req(input$checkbox)
+  #   monarch_data[monarch_data$dataname %in% input$checkbox, ]
+  #   })
   
   # Generate map
   output$map <- renderLeaflet({ 
+    # Select data of interest
+    # Part 1: use local variable "datanames" to filter on column of same name 
+    # in monarch_data
+    datanames <- ""
+    if (1 %in% input$checkbox) {
+      datanames <- c(datanames, "gbif_filtered")
+    }    
+    if (2 %in% input$checkbox) {
+      datanames <- c(datanames, "gbif_with_na")
+    } 
+    if (3 %in% input$checkbox) {
+      datanames <- c(datanames, "inat")
+    }
+    plot_data <- monarch_data %>%
+      filter(dataname %in% datanames)
+    
+    # Part 2: use date ranges to further filter plot_data as appropriate
+    # TBD
+    
     leaflet() %>%
       # Set the default zoom for map (zooms to show Arizona)
       setView(lng = -111.682299, lat = 34.496789, zoom = 6.8) %>%
       # Add base layer
-      addProviderTiles("Esri.WorldStreetMap") # %>%
+      addProviderTiles("Esri.WorldStreetMap") %>%
       # Add data points to map
-      # addCircles(
-        # data = input$checkbox,
-        # color = "#000000",
-        # fillColor = "#ffffff",
-        # fillOpacity = 0.5)
+      addCircles(
+        data = plot_data,
+        color = "#000000",
+        fillColor = "#ffffff",
+        fillOpacity = 0.5)
   })
   
   # leafletProxy() helps customize an already-rendered map
-  map_proxy <- leafletProxy("map")
-  
-  observe({
-    md <- monarch_data[monarch_data$dataname %in% input$checkbox, ]
-    map_proxy %>%
-      addCircles(lng = md$longitude, lat = md$latitude)
-  })
+  # map_proxy <- leafletProxy("map")
+  # 
+  # observe({
+  #   md <- monarch_data[monarch_data$dataname %in% input$checkbox, ]
+  #   map_proxy %>%
+  #     addCircles(lng = md$longitude, lat = md$latitude)
+  # })
   
 }
 
