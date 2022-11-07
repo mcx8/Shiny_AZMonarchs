@@ -114,31 +114,46 @@ ui <- dashboardPage(
               # Lines boxes up on dashboardBody
               fluidRow(
                 # Box for widgets and notes
-                box(width = 4, height = ,
-                    status = "primary",
-                    h3("AZ Monarch Occurrences"),
-                    helpText("This map displays monarch occurrences",
-                             "in Arizona, USA. Insert instructions."),
+                box(width = 4,
+                    status = "success",
+                    tags$img(src = "monarch-butterfly-ge3a41ab2f_1920.jpg",
+                             height = 80,
+                             width = 248),
+                    h3(HTML("<b>Mapping AZ Monarch Occurrences</b>")),
+                    helpText(HTML("This map displays Monarch <em>(Danaus plexippus)</em>",
+                             "occurrences in Arizona, USA. Please select data",
+                             "and date to be displayed on the interactive map.",
+                             "The code used to create this site can be found at:")),
+                    tags$a(href = "https://github.com/mcx8/Shiny_AZMonarchs"),
+                    # Controls for selecting data
                     checkboxGroupInput(inputId = "checkbox",
-                                       h3("Select data:"),
+                                       h4(HTML("<b>Select data:</b>")),
                                        choices = list("GBIF (exclude NA individualCount)" = 1,
                                                       "GBIF (NA individualCount)" = 2,
                                                       "iNaturalist" = 3),
                                        selected = 1),
+                    # Controls to filter for month
                     sliderInput(inputId = "date",
-                                h3("Select month and year:"),
+                                h4(HTML("<b>Select month and year:</b>")),
                                 min = as.Date("2000-01-01"),
                                 max = as.Date("2022-12-31"),
-                                value = as.Date("2010-01-01"),
+                                value = as.Date("2016-09-01"),
                                 timeFormat="%b %Y"),
-                    h3("About the data"),
+                    h4(HTML("<b>About the data</b>")),
                     helpText("The data used to generate this map",
                              "includes GBIF and iNaturalist data",
                              "that classified as research grade.",
-                             "Insert other notes.")),
+                             "Duplicates were removed from the",
+                             "data before plotting."),
+                    tags$img(src = "iNaturalist-logo.png",
+                             height = 20,
+                             width = 144),
+                    tags$img(src = "gbif-logo.png",
+                             height = 40,
+                             width = 100),),
                 # Box for map
                 box(width = 8,
-                    status = "primary",
+                    status = "success",
                     tags$style(type = "text/css", 
                                "#map {height: calc(100vh - 80px) !important;}"),
                     leafletOutput("map")),
@@ -155,15 +170,11 @@ ui <- dashboardPage(
 
 server <- function(input, output) {
   
-  # Make data reactive
-  # reactive_data <- reactive({
-  #   req(input$checkbox)
-  #   monarch_data[monarch_data$dataname %in% input$checkbox, ]
-  #   })
-  
   # Generate map
   output$map <- renderLeaflet({ 
+    
     # Select data of interest
+    
     # Part 1: use local variable "datanames" to filter on column of same name 
     # in monarch_data
     datanames <- ""
@@ -179,9 +190,12 @@ server <- function(input, output) {
     plot_data <- monarch_data %>%
       filter(dataname %in% datanames)
     
-    # Part 2: use date ranges to further filter plot_data as appropriate
-    # TBD
+    # Part 2: further filter plot_data by year and month
+    plot_data <- plot_data %>%
+      filter(year == year(input$date)) %>%
+      filter(month == month(input$date))
     
+    # Settings for base map
     leaflet() %>%
       # Set the default zoom for map (zooms to show Arizona)
       setView(lng = -111.682299, lat = 34.496789, zoom = 6.8) %>%
@@ -195,14 +209,6 @@ server <- function(input, output) {
         fillOpacity = 0.5)
   })
   
-  # leafletProxy() helps customize an already-rendered map
-  # map_proxy <- leafletProxy("map")
-  # 
-  # observe({
-  #   md <- monarch_data[monarch_data$dataname %in% input$checkbox, ]
-  #   map_proxy %>%
-  #     addCircles(lng = md$longitude, lat = md$latitude)
-  # })
   
 }
 
