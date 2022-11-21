@@ -1,12 +1,12 @@
 # Maxine Cruz
 # tmcruz@arizona.edu
 # Created: September 23, 2022
-# Last edited: October 10, 2022
+# Last edited: November 20, 2022
 # Version: RStudio 2021.09.0+351 "Ghost Orchid" Release
 
 # Purpose:
   # Generates an R Shiny app for AZ Monarch data from GBIF and iNaturalist
-  # Interactive - shows and plots available data by month on map
+  # Interactive - shows and plots available data by month and year on map
 
 ##############################################################################
 # Load libraries
@@ -16,6 +16,7 @@
 library(shiny)
 library(shinydashboard)
 library(leaflet)
+library(shinythemes)
 
 # For data
 library(spocc)
@@ -98,67 +99,102 @@ monarch_data <- unique(monarch_data, by = c("longitude", "latitude",
 # Define UI (User Interface)
 ##############################################################################
 
-ui <- dashboardPage(
+ui <- navbarPage(
   
-  skin = "yellow",
+  # Settings for header and theme
+  title = "Arizona Monarch Occurrences from 2000-2022",
+  theme = shinytheme("sandstone"),
   
-  # Add header stuff
-  dashboardHeader(title = "Arizona Monarch Occurrences from 2000-2022",
-                  titleWidth = 500),
-  
-  # Add sidebar content
+  # Add sidebar content (disabled in this case)
   dashboardSidebar(disable = TRUE),
   
   # Add content to main body of page
   dashboardBody(
-              # Lines boxes up on dashboardBody
+    
+              # Lines boxes up on dashboardBody()
               fluidRow(
+                
                 # Box for widgets and notes
                 box(width = 4,
-                    status = "success",
-                    tags$img(src = "monarch-butterfly-ge3a41ab2f_1920.jpg",
-                             height = 80,
-                             width = 248),
+                    
+                    # Add title
                     h3(HTML("<b>Mapping AZ Monarch Occurrences</b>")),
+                    
+                    # Some text
+                    tags$hr(),
                     helpText(HTML("This map displays Monarch <em>(Danaus plexippus)</em>",
                              "occurrences in Arizona, USA. Please select data",
                              "and date to be displayed on the interactive map.",
-                             "The code used to create this site can be found at:")),
-                    tags$a(href = "https://github.com/mcx8/Shiny_AZMonarchs"),
+                             "The months span over the years 2000-2022.",
+                             "When selecting the data, GBIF individualCount is",
+                             "the number of observed individuals at that site.",
+                             "The code used to create this site can be found at:",
+                             "<a>https://github.com/mcx8/Shiny_AZMonarchs</a>")),
+                    tags$hr(),
+                    
                     # Controls for selecting data
                     checkboxGroupInput(inputId = "checkbox",
                                        h4(HTML("<b>Select data:</b>")),
                                        choices = list("GBIF (exclude NA individualCount)" = 1,
                                                       "GBIF (NA individualCount)" = 2,
                                                       "iNaturalist" = 3),
-                                       selected = 1),
+                                       selected = c(1, 2, 3)),
+                    
                     # Controls to filter for month
-                    sliderInput(inputId = "date",
-                                h4(HTML("<b>Select month and year:</b>")),
-                                min = as.Date("2000-01-01"),
-                                max = as.Date("2022-12-31"),
-                                value = as.Date("2016-09-01"),
-                                timeFormat="%b %Y"),
+                    selectInput(inputId = "date",
+                                h4(HTML("<b>Select month:</b>")),
+                                choices = list("January" = 1,
+                                               "February" = 2,
+                                               "March" = 3,
+                                               "April" = 4,
+                                               "May" = 5,
+                                               "June" = 6,
+                                               "July" = 7,
+                                               "August" = 8,
+                                               "September" = 9,
+                                               "October" = 10,
+                                               "November" = 11,
+                                               "December" = 12),
+                                selected = 1),
+                    # setSliderColor("CornflowerBlue", sliderId = 1),
+                    # chooseSliderSkin("Flat"),
+                    # sliderInput(inputId = "date",
+                    #            h4(HTML("<b>Select month:</b>")),
+                    #            min = as.Date("2000-01-01"),
+                    #            max = as.Date("2022-12-31"),
+                    #            value = as.Date("2016-09-01"),
+                    #            timeFormat="%b"),
+                    
+                    # Add text
+                    tags$hr(),
                     h4(HTML("<b>About the data</b>")),
-                    helpText("The data used to generate this map",
-                             "includes GBIF and iNaturalist data",
-                             "that classified as research grade.",
-                             "Duplicates were removed from the",
-                             "data before plotting."),
-                    tags$img(src = "iNaturalist-logo.png",
-                             height = 20,
-                             width = 144),
-                    tags$img(src = "gbif-logo.png",
-                             height = 40,
-                             width = 100),),
-                # Box for map
-                box(width = 8,
-                    status = "success",
-                    tags$style(type = "text/css", 
+                    helpText(HTML("The data used to generate this map includes",
+                             "data that classified as research grade from the",
+                             "Global Biodiversity Information Facility (GBIF)",
+                             "(<a>https://www.gbif.org/</a>) and iNaturalist",
+                             "(<a>https://www.inaturalist.org/</a>). Duplicates",
+                             "were removed from the data before plotting."))
+                    ),
+                
+                # Box with tabbed options for visuals
+                tabBox(
+                  title = NULL,
+                  width = 8,
+                  
+                  # Tab for map
+                  tabPanel(
+                    title = "Map",
+                    tags$style(type = "text/css",
                                "#map {height: calc(100vh - 80px) !important;}"),
-                    leafletOutput("map")),
+                    leafletOutput("map")
+                    ),
+                  
+                  # Tab for plot
+                  tabPanel(
+                    title = "Observation Count",
+                    plotOutput("plot"))
+                    ),
               )
-      
     )
     
   )
@@ -189,16 +225,14 @@ server <- function(input, output) {
     }
     plot_data <- monarch_data %>%
       filter(dataname %in% datanames)
-    
-    # Part 2: further filter plot_data by year and month
+    # Part 2: further filter plot_data by month
     plot_data <- plot_data %>%
-      filter(year == year(input$date)) %>%
-      filter(month == month(input$date))
+      filter(month == input$date)
     
     # Settings for base map
     leaflet() %>%
       # Set the default zoom for map (zooms to show Arizona)
-      setView(lng = -111.682299, lat = 34.496789, zoom = 6.8) %>%
+      setView(lng = -111.682299, lat = 34.296789, zoom = 6.8) %>%
       # Add base layer
       addProviderTiles("Esri.WorldStreetMap") %>%
       # Add data points to map
@@ -209,6 +243,10 @@ server <- function(input, output) {
         fillOpacity = 0.5)
   })
   
+  # Generate plot
+  output$plot <- renderPlot({
+    # In progress
+  })
   
 }
 
