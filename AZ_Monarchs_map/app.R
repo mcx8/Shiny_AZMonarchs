@@ -17,6 +17,9 @@ library(shiny)
 library(shinydashboard)
 library(leaflet)
 library(shinythemes)
+library(bslib)
+library(thematic)
+library(DT)
 
 # For data
 library(spocc)
@@ -96,14 +99,35 @@ monarch_data <- unique(monarch_data, by = c("longitude", "latitude",
 
 
 ##############################################################################
+# Prepare data for charts and tables
+##############################################################################
+
+# Create table for frequency of observations per month
+month_freq <- data.frame(
+  month = month.name[sort(unique(monarch_data$month))],
+  count = tabulate(monarch_data$month)
+)
+
+# Sets first column (months) as headers after transposing
+t_set <- setNames(data.frame(t(month_freq[ , - 1])), month_freq[ , 1])
+
+
+##############################################################################
 # Define UI (User Interface)
 ##############################################################################
+
+# Makes it so the plots are themed as well
+thematic_shiny()
 
 ui <- navbarPage(
   
   # Settings for header and theme
   title = "Arizona Monarch Occurrences from 2000-2022",
-  theme = shinytheme("sandstone"),
+  theme = bs_theme(bootswatch = "sandstone",
+                   bg = "#FFF5EE",
+                   fg = "#556B2F",
+                   base_font = font_google("Prompt"),
+                   heading_font = font_google("Hubballi")),
   
   # Add sidebar content (disabled in this case)
   dashboardSidebar(disable = TRUE),
@@ -156,14 +180,6 @@ ui <- navbarPage(
                                                "November" = 11,
                                                "December" = 12),
                                 selected = 1),
-                    # setSliderColor("CornflowerBlue", sliderId = 1),
-                    # chooseSliderSkin("Flat"),
-                    # sliderInput(inputId = "date",
-                    #            h4(HTML("<b>Select month:</b>")),
-                    #            min = as.Date("2000-01-01"),
-                    #            max = as.Date("2022-12-31"),
-                    #            value = as.Date("2016-09-01"),
-                    #            timeFormat="%b"),
                     
                     # Add text
                     tags$hr(),
@@ -184,6 +200,7 @@ ui <- navbarPage(
                   # Tab for map
                   tabPanel(
                     title = "Map",
+                    icon = icon("map-location-dot"),
                     tags$style(type = "text/css",
                                "#map {height: calc(100vh - 80px) !important;}"),
                     leafletOutput("map")
@@ -192,8 +209,14 @@ ui <- navbarPage(
                   # Tab for plot
                   tabPanel(
                     title = "Observation Count",
-                    plotOutput("plot"))
-                    ),
+                    icon = icon("chart-column"),
+                    fluidRow(
+                      h3(HTML("<b>Count of Observations per Month (from 2000-2022)</b>")),
+                      plotOutput("plot", width = "98%"),
+                      dataTableOutput("table")
+                      )
+                    )
+                  ),
               )
     )
     
@@ -245,7 +268,25 @@ server <- function(input, output) {
   
   # Generate plot
   output$plot <- renderPlot({
-    # In progress
+    month_freq %>%
+      ggplot(aes(x = factor(month, month.name), y = count)) +
+      geom_col(width = 0.7) +
+      theme_minimal() +
+      xlab("Month") +
+      ylab("Number of Observations") +
+      theme(legend.position = "none",
+            axis.title = element_text(face = "bold", size = 16, 
+                                        colour = "#556B2F"),
+            axis.text.x = element_text(face = "bold", angle = 45, size = 12, 
+                                       colour = "#556B2F", vjust = 0.7),
+            axis.text.y = element_text(face = "bold", size = 12, 
+                                       colour = "#556B2F"))
+  })
+  
+  # Generate table
+  output$table <- renderDataTable({
+    datatable(month_freq, options = list(lengthMenu = c(3, 6, 9, 12), 
+                                         pageLength = 3))
   })
   
 }
