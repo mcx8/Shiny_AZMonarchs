@@ -1,0 +1,13 @@
+name: az_monarchs_map
+title:
+username:
+account: mcx8
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 7708706
+bundleId: 6545179
+url: https://mcx8.shinyapps.io/az_monarchs_map/
+when: 1669170884.19476
+lastSyncTime: 1669170884.19478
+asMultiple: FALSE
+asStatic: FALSE
